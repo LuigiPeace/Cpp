@@ -95,7 +95,5 @@ define(function (require, exports, module) {
         this.headerMap = {};
     }
     
-    
     exports.CodeWriter = CodeWriter;
-
 });

@@ -47,6 +47,24 @@ define(function (require, exports, module) {
             type: "Check",
             default: true
         },
+				"Cpp.gen.headerFormat": {
+            text: "Header's file format",
+            description: "Use h or hh file format.",
+            type: "String",
+            default: "hh"
+        },
+				"Cpp.gen.stdInclude": {
+            text: "Add includes from the std library",
+            description: "Add includes from the std library.",
+            type: "Check",
+            default: true
+        },
+				"Cpp.gen.stdNamespace": {
+            text: "Use std library namespace",
+            description: "Add using of namespace std (true) or concatenate std:: (false).",
+            type: "Check",
+            default: false
+        },
         "Cpp.gen.useVector": {
             text: "Use vector instead of *",
             description: "Use vector<> instead of pointer.",
@@ -103,8 +121,11 @@ define(function (require, exports, module) {
         return {
             useTab              : PreferenceManager.get("Cpp.gen.useTab"),
             indentSpaces        : PreferenceManager.get("Cpp.gen.indentSpaces"),
-            useVector            : PreferenceManager.get("Cpp.gen.useVector"),
-            includeHeader         : PreferenceManager.get("Cpp.gen.includeHeader"),
+            useVector           : PreferenceManager.get("Cpp.gen.useVector"),
+            includeHeader       : PreferenceManager.get("Cpp.gen.includeHeader"),
+						headerFormat        : PreferenceManager.get("Cpp.gen.headerFormat"),
+						stdInclude          : PreferenceManager.get("Cpp.gen.stdInclude"),
+						stdNamespace        : PreferenceManager.get("Cpp.gen.stdNamespace"),
             genCpp              : PreferenceManager.get("Cpp.gen.genCpp")
         };
     }

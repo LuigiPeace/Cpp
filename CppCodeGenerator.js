@@ -87,7 +87,6 @@ define(function (require, exports, module) {
         if (options.useTab) {
             return '\t';
         } else {
-
             var i, len, indent = [];
             for (i = 0, len = options.indentSpaces; i < len; i++) {
                 indent.push(" ");
@@ -104,7 +103,7 @@ define(function (require, exports, module) {
         var getFilePath = function (extenstions) {
             var abs_path = path + "/" + elem.name + ".";
             if (extenstions === _CPP_CODE_GEN_H) {
-                abs_path += _CPP_CODE_GEN_H;
+                abs_path += options.headerFormat; //_CPP_CODE_GEN_H;
             } else {
                 abs_path += _CPP_CODE_GEN_CPP;
             }
@@ -342,13 +341,13 @@ define(function (require, exports, module) {
      * @return {Object} string
      */
     CppCodeGenerator.prototype.writeHeaderSkeletonCode = function (elem, options, funct) {
-        var headerString = "_" + elem.name.toUpperCase() + "_H";
+        var headerString = "__" + elem.name.toUpperCase() + "_" + options.headerFormat.toUpperCase() + "__";
         var codeWriter = new CodeGenUtils.CodeWriter(this.getIndentString(options));
         var includePart = this.getIncludePart(elem);
         codeWriter.writeLine(copyrightHeader);
         codeWriter.writeLine();
-        codeWriter.writeLine("#ifndef " + headerString);
-        codeWriter.writeLine("#define " + headerString);
+        codeWriter.writeLine("#ifndef\t\t\t" + headerString);
+        codeWriter.writeLine("# define\t\t\t" + headerString);
         codeWriter.writeLine();
 
         if (includePart.length > 0) {
@@ -358,7 +357,7 @@ define(function (require, exports, module) {
         funct(codeWriter, elem, this);
 
         codeWriter.writeLine();
-        codeWriter.writeLine("#endif //" + headerString);
+        codeWriter.writeLine("#endif\t\t\t//" + headerString);
         return codeWriter.getData();
     };
 
@@ -376,7 +375,7 @@ define(function (require, exports, module) {
 
         codeWriter.writeLine(copyrightHeader);
         codeWriter.writeLine();
-        codeWriter.writeLine("#include \"" +  elem.name + ".h\"");
+        codeWriter.writeLine("# include\t\t\t\"" +  elem.name + "." + options.headerFormat + "\"");
         codeWriter.writeLine();
         funct(codeWriter, elem, this);
         return codeWriter.getData();
@@ -389,12 +388,14 @@ define(function (require, exports, module) {
      * @return {Object} string
      */
     CppCodeGenerator.prototype.getTemplateParameter = function (elem) {
+				var returnTemplateString = "";
+				var term = [];
         var i;
-        var returnTemplateString = "";
+        
         if (elem.templateParameters.length <= 0) {
             return returnTemplateString;
         }
-        var term = [];
+        
         returnTemplateString = "template<";
 
         for (i = 0; i < elem.templateParameters.length; i++) {
@@ -477,7 +478,7 @@ define(function (require, exports, module) {
             if (realize.target === elem) {
                 continue;
             }
-            headerString += "#include \"" + trackingHeader(elem, realize.target) + ".h\"\n";
+            headerString += "# include\t\t\t\"" + trackingHeader(elem, realize.target) + "." + options.headerFormat + "\"\n";
         }
 
         // check for member variable
@@ -494,7 +495,7 @@ define(function (require, exports, module) {
             if (target === elem) {
                 continue;
             }
-            headerString += "#include \"" + trackingHeader(elem, target) + ".h\"\n";
+            headerString += "# include\t\t\t\"" + trackingHeader(elem, target) + "." + options.headerFormat + "\"\n";
         }
 
         return headerString;
@@ -616,19 +617,19 @@ define(function (require, exports, module) {
                 if (returnTypeParam.length > 0) {
                     var returnType = returnTypeParam[0].type;
                     if (returnType === "boolean" || returnType === "bool") {
-                        methodStr += indentLine + "return false;";
+                        methodStr += indentLine + "return (false);";
                     } else if (returnType === "int" || returnType === "long" || returnType === "short" || returnType === "byte") {
-                        methodStr += indentLine + "return 0;";
+                        methodStr += indentLine + "return (0);";
                     } else if (returnType === "double" || returnType === "float") {
-                        methodStr += indentLine + "return 0.0;";
+                        methodStr += indentLine + "return (0.0);";
                     } else if (returnType === "char") {
-                        methodStr += indentLine + "return '0';";
+                        methodStr += indentLine + "return ('0');";
                     } else if (returnType === "string" || returnType === "String") {
-                        methodStr += indentLine + 'return "";';
+                        methodStr += indentLine + 'return ("");';
                     } else if (returnType === "void") {
-                        methodStr += indentLine + "return;";
+                        methodStr += indentLine + "return ;";
                     } else {
-                        methodStr += indentLine + "return null;";
+                        methodStr += indentLine + "return (NULL);";
                     }
                     docs += "\n@return " + returnType;
                 }
@@ -644,7 +645,6 @@ define(function (require, exports, module) {
                 }
                 methodStr += ";";
             }
-
 
             return "\n" + this.getDocuments(docs) + methodStr;
         }
