@@ -47,19 +47,25 @@ define(function (require, exports, module) {
             type: "Check",
             default: true
         },
-				"Cpp.gen.headerFormat": {
+		"Cpp.gen.isCpp11": {
+            text: "C++11",
+            description: "Enable C++11 features.",
+            type: "Check",
+            default: false
+        },
+		"Cpp.gen.headerFormat": {
             text: "Header's file format",
             description: "Use h or hh file format.",
             type: "String",
             default: "hh"
         },
-				"Cpp.gen.stdInclude": {
+		"Cpp.gen.stdInclude": {
             text: "Add includes from the std library",
             description: "Add includes from the std library.",
             type: "Check",
             default: true
         },
-				"Cpp.gen.stdNamespace": {
+		"Cpp.gen.stdNamespace": {
             text: "Use std library namespace",
             description: "Add using of namespace std (true) or concatenate std:: (false).",
             type: "Check",
@@ -123,9 +129,10 @@ define(function (require, exports, module) {
             indentSpaces        : PreferenceManager.get("Cpp.gen.indentSpaces"),
             useVector           : PreferenceManager.get("Cpp.gen.useVector"),
             includeHeader       : PreferenceManager.get("Cpp.gen.includeHeader"),
-						headerFormat        : PreferenceManager.get("Cpp.gen.headerFormat"),
-						stdInclude          : PreferenceManager.get("Cpp.gen.stdInclude"),
-						stdNamespace        : PreferenceManager.get("Cpp.gen.stdNamespace"),
+			isCpp11				: PreferenceManager.get("Cpp.gen.isCpp11"),
+			headerFormat        : PreferenceManager.get("Cpp.gen.headerFormat"),
+			stdInclude          : PreferenceManager.get("Cpp.gen.stdInclude"),
+			stdNamespace        : PreferenceManager.get("Cpp.gen.stdNamespace"),
             genCpp              : PreferenceManager.get("Cpp.gen.genCpp")
         };
     }

@@ -111,9 +111,10 @@ define(function (require, exports, module) {
         };
 
         var writeEnumeration = function (codeWriter, elem, cppCodeGen) {
-            var i;
             var modifierList = cppCodeGen.getModifiers(elem);
             var modifierStr = "";
+			var i;
+			
             for (i = 0; i < modifierList.length; i++) {
                 modifierStr += modifierList[i] + " ";
             }
@@ -138,22 +139,22 @@ define(function (require, exports, module) {
                 }
             };
             var writeInheritance = function (elem) {
-                var inheritString = ": ";
-                var genList = cppCodeGen.getSuperClasses(elem);
-
+				var genList = cppCodeGen.getSuperClasses(elem);
+                var inheritString = " : ";
+                
                 if (genList.length === 0) {
                     return "";
                 }
 
+				var term = [];
                 var i;
-                var term = [];
-
-
+                
                 for (i = 0; i < genList.length; i++) {
                     var generalization = genList[i];
                     // public AAA, private BBB
                     term.push(generalization.visibility + " " + generalization.target.name);
                 }
+				
                 inheritString += term.join(", ");
                 return inheritString;
             };
@@ -183,37 +184,38 @@ define(function (require, exports, module) {
             }
 
             var allMembers = memberAttr.concat(methodList).concat(innerElement);
+			var classfiedAttributes = cppCodeGen.classifyVisibility(allMembers);
 
-            var classfiedAttributes = cppCodeGen.classifyVisibility(allMembers);
-
-
-            var finalModifier = "";
+			var finalModifier = "";
             if (elem.isFinalSpecialization === true || elem.isLeaf === true) {
-                finalModifier = " final ";
+                finalModifier = " const ";
             }
             var templatePart = cppCodeGen.getTemplateParameter(elem);
             if (templatePart.length > 0) {
                 codeWriter.writeLine(templatePart);
             }
 
-            codeWriter.writeLine("class " + elem.name + finalModifier + writeInheritance(elem) + " {");
+            codeWriter.writeLine("class\t\t\t\t" + elem.name + finalModifier + writeInheritance(elem) + "\n{");
             if (classfiedAttributes._public.length > 0) {
-                codeWriter.writeLine("public: ");
+                codeWriter.writeLine("public:");
                 codeWriter.indent();
                 write(classfiedAttributes._public);
                 codeWriter.outdent();
+				codeWriter.writeLine("");
             }
             if (classfiedAttributes._protected.length > 0) {
-                codeWriter.writeLine("protected: ");
+                codeWriter.writeLine("protected:");
                 codeWriter.indent();
                 write(classfiedAttributes._protected);
                 codeWriter.outdent();
+				codeWriter.writeLine("");
             }
             if (classfiedAttributes._private.length > 0) {
-                codeWriter.writeLine("private: ");
+                codeWriter.writeLine("private:");
                 codeWriter.indent();
                 write(classfiedAttributes._private);
                 codeWriter.outdent();
+				codeWriter.writeLine("");
             }
 
             codeWriter.writeLine("};");
@@ -346,7 +348,7 @@ define(function (require, exports, module) {
         var includePart = this.getIncludePart(elem);
         codeWriter.writeLine(copyrightHeader);
         codeWriter.writeLine();
-        codeWriter.writeLine("#ifndef\t\t\t" + headerString);
+        codeWriter.writeLine("#ifndef\t\t\t\t" + headerString);
         codeWriter.writeLine("# define\t\t\t" + headerString);
         codeWriter.writeLine();
 
@@ -357,7 +359,7 @@ define(function (require, exports, module) {
         funct(codeWriter, elem, this);
 
         codeWriter.writeLine();
-        codeWriter.writeLine("#endif\t\t\t//" + headerString);
+        codeWriter.writeLine("#endif\t\t\t\t//" + headerString);
         return codeWriter.getData();
     };
 
@@ -422,9 +424,9 @@ define(function (require, exports, module) {
 
         var i;
         var trackingHeader = function (elem, target) {
-            var header = "";
             var elementString = "";
             var targetString = "";
+			var header = "";
             var i;
 
 
@@ -478,7 +480,7 @@ define(function (require, exports, module) {
             if (realize.target === elem) {
                 continue;
             }
-            headerString += "# include\t\t\t\"" + trackingHeader(elem, realize.target) + "." + options.headerFormat + "\"\n";
+            headerString += "# include\t\t\t\"" + trackingHeader(elem, realize.target) + "." + this.genOptions.headerFormat + "\"\n";
         }
 
         // check for member variable
@@ -495,7 +497,7 @@ define(function (require, exports, module) {
             if (target === elem) {
                 continue;
             }
-            headerString += "# include\t\t\t\"" + trackingHeader(elem, target) + "." + options.headerFormat + "\"\n";
+            headerString += "# include\t\t\t\"" + trackingHeader(elem, target) + "." + this.genOptions.headerFormat + "\"\n";
         }
 
         return headerString;
@@ -541,20 +543,18 @@ define(function (require, exports, module) {
      */
     CppCodeGenerator.prototype.getMemberVariable = function (elem) {
         if (elem.name.length > 0) {
-            var terms = [];
-            // doc
             var docs = this.getDocuments(elem.documentation);
-            // modifiers
             var _modifiers = this.getModifiers(elem);
+			var terms = [];
+			
             if (_modifiers.length > 0) {
                 terms.push(_modifiers.join(" "));
             }
-            // type
+            
             terms.push(this.getType(elem));
-            // name
-            terms.push(elem.name);
-            // initial value
-            if (elem.defaultValue && elem.defaultValue.length > 0) {
+            terms.push("\t\t\t" + elem.name);
+			
+            if (this.genOptions.isCpp11 && elem.defaultValue && elem.defaultValue.length > 0) {
                 terms.push("= " + elem.defaultValue);
             }
             return (docs + terms.join(" ") + ";");
@@ -570,11 +570,12 @@ define(function (require, exports, module) {
      */
     CppCodeGenerator.prototype.getMethod = function (elem, isCppBody) {
         if (elem.name.length > 0) {
-            var docs = elem.documentation;
-            var i;
             var methodStr = "";
             var isVirtaul = false;
-            // TODO virtual fianl static 키워드는 섞어 쓸수가 없다
+			var docs = elem.documentation;
+            var i;
+			
+            // TODO virtual final static 키워드는 섞어 쓸수가 없다
             if (elem.isStatic === true) {
                 methodStr += "static ";
             } else if (elem.isAbstract === true) {
@@ -594,7 +595,8 @@ define(function (require, exports, module) {
                 docs += "\n@param " + inputParam.name;
             }
 
-            methodStr += ((returnTypeParam.length > 0) ? returnTypeParam[0].type : "void") + " ";
+            methodStr += ((returnTypeParam.length > 0) ? returnTypeParam[0].type : "void");
+			methodStr += "\t\t\t\t";
 
             if (isCppBody) {
                 var t_elem = elem;
@@ -611,9 +613,17 @@ define(function (require, exports, module) {
                     indentLine += " ";
                 }
 
+				methodStr += "\t";
                 methodStr += specifier;
                 methodStr += elem.name;
-                methodStr += "(" + inputParamStrings.join(", ") + ")" + " {\n";
+                methodStr += "(" + inputParamStrings.join(", ") + ")";
+				
+				if (elem.isLeaf === true) {
+					methodStr += " const";
+				}
+				
+				methodStr += "\n{\n";
+				
                 if (returnTypeParam.length > 0) {
                     var returnType = returnTypeParam[0].type;
                     if (returnType === "boolean" || returnType === "bool") {
@@ -639,7 +649,7 @@ define(function (require, exports, module) {
                 methodStr += "(" + inputParamStrings.join(", ") + ")";
 
                 if (elem.isLeaf === true) {
-                    methodStr += " final";
+                    methodStr += " const";
                 } else if (elem.isAbstract === true) { // TODO 만약 virtual 이면 모두 pure virtual? 체크 할것
                     methodStr += " = 0";
                 }
@@ -758,9 +768,8 @@ define(function (require, exports, module) {
         });
         return generalizations;
     };
-
-
-
+	
+	
     function generate(baseModel, basePath, options) {
         var result = new $.Deferred();
         var cppCodeGenerator = new CppCodeGenerator(baseModel, basePath);
