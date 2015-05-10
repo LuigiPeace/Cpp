@@ -71,6 +71,12 @@ define(function (require, exports, module) {
             type: "Check",
             default: false
         },
+		"Cpp.gen.attributeName": {
+            text: "Add a prefix to attribute's name",
+            description: "Add a prefix to attribute's name.",
+            type: "String",
+            default: "m_"
+        },
         "Cpp.gen.useVector": {
             text: "Use vector instead of *",
             description: "Use vector<> instead of pointer.",
@@ -133,6 +139,7 @@ define(function (require, exports, module) {
 			headerFormat        : PreferenceManager.get("Cpp.gen.headerFormat"),
 			stdInclude          : PreferenceManager.get("Cpp.gen.stdInclude"),
 			stdNamespace        : PreferenceManager.get("Cpp.gen.stdNamespace"),
+			attributeName		: PreferenceManager.get("Cpp.gen.attributeName"),
             genCpp              : PreferenceManager.get("Cpp.gen.genCpp")
         };
     }

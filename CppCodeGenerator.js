@@ -201,21 +201,18 @@ define(function (require, exports, module) {
                 codeWriter.indent();
                 write(classfiedAttributes._public);
                 codeWriter.outdent();
-				codeWriter.writeLine("");
             }
             if (classfiedAttributes._protected.length > 0) {
                 codeWriter.writeLine("protected:");
                 codeWriter.indent();
                 write(classfiedAttributes._protected);
                 codeWriter.outdent();
-				codeWriter.writeLine("");
             }
             if (classfiedAttributes._private.length > 0) {
                 codeWriter.writeLine("private:");
                 codeWriter.indent();
                 write(classfiedAttributes._private);
                 codeWriter.outdent();
-				codeWriter.writeLine("");
             }
 
             codeWriter.writeLine("};");
@@ -552,7 +549,7 @@ define(function (require, exports, module) {
             }
             
             terms.push(this.getType(elem));
-            terms.push("\t\t\t" + elem.name);
+            terms.push("\t\t\t" + this.genOptions.attributeName + elem.name);
 			
             if (this.genOptions.isCpp11 && elem.defaultValue && elem.defaultValue.length > 0) {
                 terms.push("= " + elem.defaultValue);
@@ -626,20 +623,19 @@ define(function (require, exports, module) {
 				
                 if (returnTypeParam.length > 0) {
                     var returnType = returnTypeParam[0].type;
-                    if (returnType === "boolean" || returnType === "bool") {
+                    if (returnType === "bool") {
                         methodStr += indentLine + "return (false);";
-                    } else if (returnType === "int" || returnType === "long" || returnType === "short" || returnType === "byte") {
-                        methodStr += indentLine + "return (0);";
-                    } else if (returnType === "double" || returnType === "float") {
+                    } else if (returnType === "double" || returnType === "float" ||
+								returnType === "unsigned double" || returnType === "unsigned float") {
                         methodStr += indentLine + "return (0.0);";
-                    } else if (returnType === "char") {
-                        methodStr += indentLine + "return ('0');";
-                    } else if (returnType === "string" || returnType === "String") {
+                    } else if (returnType === "char" || returnType === "unsigned char") {
+                        methodStr += indentLine + "return ('\0');";
+                    } else if (returnType === "string") {
                         methodStr += indentLine + 'return ("");';
                     } else if (returnType === "void") {
                         methodStr += indentLine + "return ;";
                     } else {
-                        methodStr += indentLine + "return (NULL);";
+                        methodStr += indentLine + "return (0);";
                     }
                     docs += "\n@return " + returnType;
                 }
