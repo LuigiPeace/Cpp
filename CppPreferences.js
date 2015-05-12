@@ -66,10 +66,10 @@ define(function (require, exports, module) {
             default: true
         },
 		"Cpp.gen.stdNamespace": {
-            text: "Use std library namespace",
-            description: "Add using of namespace std (true) or concatenate std:: (false).",
-            type: "Check",
-            default: false
+            text: "Use special format for namespace",
+            description: "Use a special format string to allow namespace. (instead of std:: use std__ for example).",
+            type: "String",
+            default: "__"
         },
 		"Cpp.gen.attributeName": {
             text: "Add a prefix to attribute's name",

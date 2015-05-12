@@ -94,8 +94,7 @@ define(function (require, exports, module) {
             return indent.join("");
         }
     };
-
-
+	
     CppCodeGenerator.prototype.generate = function (elem, path, options) {
 
         this.genOptions = options;
@@ -118,8 +117,53 @@ define(function (require, exports, module) {
             for (i = 0; i < modifierList.length; i++) {
                 modifierStr += modifierList[i] + " ";
             }
-            codeWriter.writeLine(modifierStr + "enum " + elem.name + " { "  + _.pluck(elem.literals, 'name').join(", ")  + " };");
+			
+            codeWriter.writeLine(modifierStr + "typedef enum\t\te_" + elem.name + "\n{\n\t"  + _.pluck(elem.literals, 'name').join(", ")  + "\n}\t\t\t\t\t" + elem.name + ";");
         };
+		
+		var getConstructor = function(elem, isCppBody) {
+			var methodStr = "";
+			
+			if (!elem instanceof type.UMLClass) {
+				return "";
+			}
+			
+			if (isCppBody) {
+				methodStr += elem.name + "::" + elem.name + "()\n";
+				methodStr += "{\n}\n";
+			} else {
+				methodStr = elem.name + "();";
+			}
+			
+			return methodStr;
+		};
+		
+		var getDestructor = function(elem, isCppBody) {
+			var methodStr = "";
+			
+			if (!elem instanceof type.UMLClass) {
+				return "";
+			}
+			
+			if (isCppBody) {
+				methodStr += elem.name + "::~" + elem.name + "()\n";
+				methodStr += "{\n}\n";
+			} else {
+				if (elem instanceof type.UMLInterface) {
+					methodStr += "virtual\t\t\t";
+				}
+				
+				methodStr += "~" + elem.name + "()";
+				
+				if (elem instanceof type.UMLInterface) {
+					methodStr += " {}";
+				}
+				
+				methodStr += ";";
+			}
+			
+			return methodStr;
+		};
 
         var writeClassHeader = function (codeWriter, elem, cppCodeGen) {
             var i;
@@ -199,6 +243,9 @@ define(function (require, exports, module) {
             if (classfiedAttributes._public.length > 0) {
                 codeWriter.writeLine("public:");
                 codeWriter.indent();
+				codeWriter.writeLine(getConstructor(elem, false));
+				codeWriter.writeLine(getDestructor(elem, false));
+				codeWriter.writeLine();
                 write(classfiedAttributes._public);
                 codeWriter.outdent();
             }
@@ -222,9 +269,13 @@ define(function (require, exports, module) {
             var i = 0;
             var item;
             var writeClassMethod = function (elemList) {
+				
+				codeWriter.writeLine(getConstructor(elem, true));
+				codeWriter.writeLine(getDestructor(elem, true));
 
                 for (i = 0; i < elemList._public.length; i++) {
                     item = elemList._public[i];
+					
                     if (item instanceof type.UMLOperation) { // if write method
                         codeWriter.writeLine(cppCodeGen.getMethod(item, true));
                     } else if (item instanceof type.UMLClass) {
@@ -257,7 +308,7 @@ define(function (require, exports, module) {
             if(_.isString(elem.documentation)) {
                 docs += elem.documentation;
             }
-            codeWriter.writeLine(cppCodeGen.getDocuments(docs));
+            /*codeWriter.writeLine(cppCodeGen.getDocuments(docs));*/
             writeClassMethod(methodList);
 
             // parsing nested class
@@ -331,7 +382,7 @@ define(function (require, exports, module) {
     };
 
     /**
-     * Write *.h file. Implement functor to each uml type.
+     * Write *.hh file. Implement functor to each uml type.
      * Returns text
      *
      * @param {Object} elem
@@ -372,7 +423,7 @@ define(function (require, exports, module) {
     CppCodeGenerator.prototype.writeBodySkeletonCode = function (elem, options, funct) {
         var codeWriter = new CodeGenUtils.CodeWriter(this.getIndentString(options));
 
-        codeWriter.writeLine(copyrightHeader);
+        /*codeWriter.writeLine(copyrightHeader);*/
         codeWriter.writeLine();
         codeWriter.writeLine("# include\t\t\t\"" +  elem.name + "." + options.headerFormat + "\"");
         codeWriter.writeLine();
@@ -387,8 +438,8 @@ define(function (require, exports, module) {
      * @return {Object} string
      */
     CppCodeGenerator.prototype.getTemplateParameter = function (elem) {
-				var returnTemplateString = "";
-				var term = [];
+		var returnTemplateString = "";
+		var term = [];
         var i;
         
         if (elem.templateParameters.length <= 0) {
@@ -527,11 +578,29 @@ define(function (require, exports, module) {
         }
         return {
             _public : public_list,
-            _protected: protected_list,
-            _private: private_list
+            _protected : protected_list,
+            _private : private_list
         };
     };
-
+	
+	/**
+	 * Resolve namespace
+	 * 
+	 * @param {String} type
+	 * @return {String} type
+	 */
+	CppCodeGenerator.prototype.resolveNamespaceType = function(type) {
+		if (type === undefined || type === null) {
+			return type;
+		}
+		
+		if (this.genOptions.stdNamespace.length > 0) {
+			return type.replace(this.genOptions.stdNamespace, "::");
+		}
+		
+		return type;
+	};
+	
     /**
      * generate variables from attributes[i]
      *
@@ -540,7 +609,7 @@ define(function (require, exports, module) {
      */
     CppCodeGenerator.prototype.getMemberVariable = function (elem) {
         if (elem.name.length > 0) {
-            var docs = this.getDocuments(elem.documentation);
+            //var docs = this.getDocuments(elem.documentation);
             var _modifiers = this.getModifiers(elem);
 			var terms = [];
 			
@@ -554,7 +623,7 @@ define(function (require, exports, module) {
             if (this.genOptions.isCpp11 && elem.defaultValue && elem.defaultValue.length > 0) {
                 terms.push("= " + elem.defaultValue);
             }
-            return (docs + terms.join(" ") + ";");
+            return (/*docs + */terms.join(" ") + ";");
         }
     };
 
@@ -567,12 +636,10 @@ define(function (require, exports, module) {
      */
     CppCodeGenerator.prototype.getMethod = function (elem, isCppBody) {
         if (elem.name.length > 0) {
-            var methodStr = "";
-            var isVirtaul = false;
 			var docs = elem.documentation;
+            var methodStr = "";
             var i;
 			
-            // TODO virtual final static 키워드는 섞어 쓸수가 없다
             if (elem.isStatic === true) {
                 methodStr += "static ";
             } else if (elem.isAbstract === true) {
@@ -588,30 +655,30 @@ define(function (require, exports, module) {
             var inputParamStrings = [];
             for (i = 0; i < inputParams.length; i++) {
                 var inputParam = inputParams[i];
-                inputParamStrings.push(inputParam.type + " " + inputParam.name);
-                docs += "\n@param " + inputParam.name;
+                inputParamStrings.push(inputParam.type + " " + this.resolveNamespaceType(inputParam.name));
+                docs += "\n@param " + this.resolveNamespaceType(inputParam.name);
             }
-
-            methodStr += ((returnTypeParam.length > 0) ? returnTypeParam[0].type : "void");
+			
+			methodStr += this.resolveNamespaceType((returnTypeParam.length > 0) ? returnTypeParam[0].type : "void");
 			methodStr += "\t\t\t\t";
 
             if (isCppBody) {
                 var t_elem = elem;
                 var specifier = "";
-
+				
                 while (t_elem._parent instanceof type.UMLClass) {
                     specifier = t_elem._parent.name + "::" + specifier;
                     t_elem = t_elem._parent;
                 }
-
+				
                 var indentLine = "";
 
                 for (i = 0; i < this.genOptions.indentSpaces; i++) {
                     indentLine += " ";
                 }
-
+				
 				methodStr += "\t";
-                methodStr += specifier;
+                methodStr += this.resolveNamespaceType(specifier);
                 methodStr += elem.name;
                 methodStr += "(" + inputParamStrings.join(", ") + ")";
 				
@@ -637,22 +704,23 @@ define(function (require, exports, module) {
                     } else {
                         methodStr += indentLine + "return (0);";
                     }
-                    docs += "\n@return " + returnType;
+                    docs += "\n@return " + this.resolveNamespaceType(returnType);
                 }
                 methodStr += "\n}";
             } else {
                 methodStr += elem.name;
                 methodStr += "(" + inputParamStrings.join(", ") + ")";
-
+				
                 if (elem.isLeaf === true) {
                     methodStr += " const";
-                } else if (elem.isAbstract === true) { // TODO 만약 virtual 이면 모두 pure virtual? 체크 할것
+                }
+				if (elem.isAbstract === true) {
                     methodStr += " = 0";
                 }
                 methodStr += ";";
             }
-
-            return "\n" + this.getDocuments(docs) + methodStr;
+			
+            return /*this.getDocuments(docs) + */ methodStr;
         }
     };
 
@@ -684,12 +752,12 @@ define(function (require, exports, module) {
      */
     CppCodeGenerator.prototype.getVisibility = function (elem) {
         switch (elem.visibility) {
-        case UML.VK_PUBLIC:
-            return "public";
-        case UML.VK_PROTECTED:
-            return "protected";
-        case UML.VK_PRIVATE:
-            return "private";
+			case UML.VK_PUBLIC:
+				return "public";
+			case UML.VK_PROTECTED:
+				return "protected";
+			case UML.VK_PRIVATE:
+				return "private";
         }
         return null;
     };
@@ -740,18 +808,19 @@ define(function (require, exports, module) {
         if (elem.multiplicity) {
             if (_.contains(["0..*", "1..*", "*"], elem.multiplicity.trim())) {
                 if (elem.isOrdered === true) {
-                    _type = "Vector<" + _type + ">";
+                    _type = "vector<" + _type + ">";
                 } else {
-                    _type = "Vector<" + _type + ">";
+                    _type = "vector<" + _type + ">";
                 }
             } else if (elem.multiplicity !== "1" && elem.multiplicity.match(/^\d+$/)) { // number
                 //TODO check here
                 _type += "[]";
             }
         }
-        return _type;
+        return this.resolveNamespaceType(_type);
     };
-
+	
+	
     /**
      * get all super class / interface from element
      *
