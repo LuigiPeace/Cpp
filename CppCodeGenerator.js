@@ -248,7 +248,14 @@ define(function (require, exports, module) {
 				codeWriter.writeLine();
                 write(classfiedAttributes._public);
                 codeWriter.outdent();
-            }
+            } else {
+				codeWriter.writeLine("public:");
+                codeWriter.indent();
+				codeWriter.writeLine(getConstructor(elem, false));
+				codeWriter.writeLine(getDestructor(elem, false));
+				codeWriter.writeLine();
+                codeWriter.outdent();
+			}
             if (classfiedAttributes._protected.length > 0) {
                 codeWriter.writeLine("protected:");
                 codeWriter.indent();
@@ -394,7 +401,7 @@ define(function (require, exports, module) {
         var headerString = "__" + elem.name.toUpperCase() + "_" + options.headerFormat.toUpperCase() + "__";
         var codeWriter = new CodeGenUtils.CodeWriter(this.getIndentString(options));
         var includePart = this.getIncludePart(elem);
-        codeWriter.writeLine(copyrightHeader);
+        /*codeWriter.writeLine(copyrightHeader);*/
         codeWriter.writeLine();
         codeWriter.writeLine("#ifndef\t\t\t\t" + headerString);
         codeWriter.writeLine("# define\t\t\t" + headerString);
@@ -697,13 +704,17 @@ define(function (require, exports, module) {
                         methodStr += indentLine + "return (0.0);";
                     } else if (returnType === "char" || returnType === "unsigned char") {
                         methodStr += indentLine + "return ('\0');";
-                    } else if (returnType === "string") {
+                    } else if (returnType.indexOf("string") != -1) {
                         methodStr += indentLine + 'return ("");';
                     } else if (returnType === "void") {
                         methodStr += indentLine + "return ;";
-                    } else {
-                        methodStr += indentLine + "return (0);";
-                    }
+                    } else if (returnType.indexOf("*") != -1) {
+                        methodStr += indentLine + "return (NULL);";
+                    } else if (returnType.indexOf("&") != -1) {
+						methodStr += indentLine + "return (*this);";
+					} else {
+						methodStr += indentLine + "return (0);";
+					}
                     docs += "\n@return " + this.resolveNamespaceType(returnType);
                 }
                 methodStr += "\n}";
