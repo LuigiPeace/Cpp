@@ -59,6 +59,18 @@ define(function (require, exports, module) {
             type: "String",
             default: "hh"
         },
+		"Cpp.gen.commentsFormat": {
+            text: "Choose the format used for comments",
+            description: "Choose the format used for comments: (true) /* * */, (false) //",
+            type: "Check",
+            default: true
+        },
+		"Cpp.gen.doxygenTemplate": {
+            text: "Add a documentation template compliant with Doxygen",
+            description: "Add a documentation template compliant with Doxygen.",
+            type: "Check",
+            default: true
+        },
 		"Cpp.gen.stdInclude": {
             text: "Add includes from the std library",
             description: "Add includes from the std library.",
@@ -137,6 +149,8 @@ define(function (require, exports, module) {
             includeHeader       : PreferenceManager.get("Cpp.gen.includeHeader"),
 			isCpp11				: PreferenceManager.get("Cpp.gen.isCpp11"),
 			headerFormat        : PreferenceManager.get("Cpp.gen.headerFormat"),
+			commentsFormat		: PreferenceManager.get("Cpp.gen.commentsFormat"),
+			doxygenTemplate		: PreferenceManager.get("Cpp.gen.doxygenTemplate"),
 			stdInclude          : PreferenceManager.get("Cpp.gen.stdInclude"),
 			stdNamespace        : PreferenceManager.get("Cpp.gen.stdNamespace"),
 			attributeName		: PreferenceManager.get("Cpp.gen.attributeName"),

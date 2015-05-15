@@ -47,6 +47,9 @@ define(function (require, exports, module) {
 
     var copyrightHeader = "/* Test header @ toori67 \n * This is Test\n * also test\n * also test again\n */";
     var versionString = "v0.0.1";
+	
+	var stdCIncludes = ["cstdlib", "ctime", "cmath"];
+	var stdCppIncludes = ["stack", "queue", "vector", "list", "map", "string", "sstream", "fstream", "iostream", "algorithm"];
 
 
     /**
@@ -95,9 +98,38 @@ define(function (require, exports, module) {
         }
     };
 	
+	/**
+     * Return Indent String based on options
+     * @param {Object} options
+     * @return {string}
+     */
+    CppCodeGenerator.prototype.getDoxygenTemplate = function (hasReturn, parametersName) {
+        var template = "";
+		var i;
+		
+		template += "/*" + "\n";
+		template += " * \brief " + "\n";
+		
+		for (i = 0; i < parametersName.length; i++) {
+			template += " * \param " + parametersName[i] + " " + "\n";
+		}
+		
+		if (hasReturn) {
+			template += " * \return " + "\n";
+		}
+		
+		return template + "*/";
+    };
+	
     CppCodeGenerator.prototype.generate = function (elem, path, options) {
 
-        this.genOptions = options;
+		this.genOptions = options;
+		
+		var comments = {
+			start: (options.commentsFormat) ? "/*" : "//";
+			middle: (options.commentsFormat) ? " *" : "//";
+			end: (options.commentsFormat) ? " */" : "//";
+		}
 
         var getFilePath = function (extenstions) {
             var abs_path = path + "/" + elem.name + ".";
@@ -315,7 +347,11 @@ define(function (require, exports, module) {
             if(_.isString(elem.documentation)) {
                 docs += elem.documentation;
             }
-            /*codeWriter.writeLine(cppCodeGen.getDocuments(docs));*/
+			
+			if (this.genOptions.doxygenTemplate) {
+				/*codeWriter.writeLine(cppCodeGen.getDocuments(docs));*/
+			}
+			
             writeClassMethod(methodList);
 
             // parsing nested class
@@ -401,7 +437,11 @@ define(function (require, exports, module) {
         var headerString = "__" + elem.name.toUpperCase() + "_" + options.headerFormat.toUpperCase() + "__";
         var codeWriter = new CodeGenUtils.CodeWriter(this.getIndentString(options));
         var includePart = this.getIncludePart(elem);
-        /*codeWriter.writeLine(copyrightHeader);*/
+		
+		if (this.genOptions.doxygenTemplate) {
+			/*codeWriter.writeLine(copyrightHeader);*/
+		}
+		
         codeWriter.writeLine();
         codeWriter.writeLine("#ifndef\t\t\t\t" + headerString);
         codeWriter.writeLine("# define\t\t\t" + headerString);
@@ -430,7 +470,10 @@ define(function (require, exports, module) {
     CppCodeGenerator.prototype.writeBodySkeletonCode = function (elem, options, funct) {
         var codeWriter = new CodeGenUtils.CodeWriter(this.getIndentString(options));
 
-        /*codeWriter.writeLine(copyrightHeader);*/
+		if (this.genOptions.doxygenTemplate) {
+			/*codeWriter.writeLine(copyrightHeader);*/
+		}
+		
         codeWriter.writeLine();
         codeWriter.writeLine("# include\t\t\t\"" +  elem.name + "." + options.headerFormat + "\"");
         codeWriter.writeLine();
@@ -630,7 +673,7 @@ define(function (require, exports, module) {
             if (this.genOptions.isCpp11 && elem.defaultValue && elem.defaultValue.length > 0) {
                 terms.push("= " + elem.defaultValue);
             }
-            return (/*docs + */terms.join(" ") + ";");
+            return (((this.genOptions.doxygenTemplate) ? /*docs + */ : "") + terms.join(" ") + ";");
         }
     };
 
@@ -708,16 +751,16 @@ define(function (require, exports, module) {
                         methodStr += indentLine + 'return ("");';
                     } else if (returnType === "void") {
                         methodStr += indentLine + "return ;";
-                    } else if (returnType.indexOf("*") != -1) {
+                    } else if (returnType.indexOf("*") == returnType.length -1) {
                         methodStr += indentLine + "return (NULL);";
-                    } else if (returnType.indexOf("&") != -1) {
+                    } else if (returnType.indexOf("&") == returnType.length -1) {
 						methodStr += indentLine + "return (*this);";
 					} else {
 						methodStr += indentLine + "return (0);";
 					}
                     docs += "\n@return " + this.resolveNamespaceType(returnType);
                 }
-                methodStr += "\n}";
+                methodStr += "\n}\n";
             } else {
                 methodStr += elem.name;
                 methodStr += "(" + inputParamStrings.join(", ") + ")";
@@ -731,7 +774,11 @@ define(function (require, exports, module) {
                 methodStr += ";";
             }
 			
-            return /*this.getDocuments(docs) + */ methodStr;
+			if (this.genOptions.doxygenTemplate) {
+				/*methodStr = this.getDocuments(docs) + methodStr;*/
+			}
+			
+            return methodStr;
         }
     };
 
@@ -745,12 +792,12 @@ define(function (require, exports, module) {
         var docs = "";
         if (_.isString(text) && text.length !== 0) {
             var lines = text.trim().split("\n");
-            docs += "/**\n";
+            docs += comments.start + "\n";
             var i;
             for (i = 0; i < lines.length; i++) {
-                docs += " * " + lines[i] + "\n";
+                docs += comments.middle + " " + lines[i] + "\n";
             }
-            docs += " */\n";
+            docs += comments.end + "\n";
         }
         return docs;
     };
