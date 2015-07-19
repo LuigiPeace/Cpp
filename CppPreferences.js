@@ -83,6 +83,12 @@ define(function (require, exports, module) {
             type: "String",
             default: "__"
         },
+		"Cpp.gen.separator": {
+            text: "Use special separator to separate template arguments",
+            description: "Use special separator to separate template arguments. (map<foo| bar> become map<foo, bar>)",
+            type: "String",
+            default: "|"
+        },
 		"Cpp.gen.attributeName": {
             text: "Add a prefix to attribute's name",
             description: "Add a prefix to attribute's name.",
@@ -153,6 +159,7 @@ define(function (require, exports, module) {
 			doxygenTemplate		: PreferenceManager.get("Cpp.gen.doxygenTemplate"),
 			stdInclude          : PreferenceManager.get("Cpp.gen.stdInclude"),
 			stdNamespace        : PreferenceManager.get("Cpp.gen.stdNamespace"),
+			separator	        : PreferenceManager.get("Cpp.gen.separator"),
 			attributeName		: PreferenceManager.get("Cpp.gen.attributeName"),
             genCpp              : PreferenceManager.get("Cpp.gen.genCpp")
         };

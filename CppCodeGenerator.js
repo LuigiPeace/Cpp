@@ -48,10 +48,34 @@ define(function (require, exports, module) {
     var copyrightHeader = "/* Test header @ toori67 \n * This is Test\n * also test\n * also test again\n */";
     var versionString = "v0.0.1";
 	
-	var stdCIncludes = ["cstdlib", "ctime", "cmath"];
-	var stdCppIncludes = ["stack", "queue", "vector", "list", "map", "string", "sstream", "fstream", "iostream", "algorithm"];
-
-
+	var stdCIncludes = ["cstdlib", "ctime"],
+		stdCppIncludes = ["stack", "queue", "vector", "list", "map", "string", "sstream", "fstream", "iostream"];
+	
+	var stdCType = {
+			'cstdlib': ["size_t"],
+			'ctime': ["time_t"]
+		},
+		stdCppType = {
+			'stack': ["stack"],
+			'queue': ["queue"],
+			'vector': ["vector"],
+			'list': ["list"],
+			'map': ["map"],
+			'string': ["string"],
+			'sstream': ["stringstream", "ostringstream", "istringstream"],
+			'fstream': ["fstream", "ifstream", "ofstream"],
+			'iostream': ["string"]
+		};
+	
+	function Comments(fmt) {
+		this.start = ((!fmt) ? "/*" : "//");
+		this.middle = ((!fmt) ? " *" : "//");
+		this.end = ((!fmt) ? " */" : "//");
+	};
+	
+	var comments = new Comments(false);
+	
+	
     /**
      * Cpp code generator
      * @constructor
@@ -79,6 +103,8 @@ define(function (require, exports, module) {
             doc += "\n@version " + ProjectManager.getProject().version;
         }
         copyrightHeader = this.getDocuments(doc);
+		
+		this.comments = new Comments(false);
     }
 
     /**
@@ -107,29 +133,24 @@ define(function (require, exports, module) {
         var template = "";
 		var i;
 		
-		template += "/*" + "\n";
-		template += " * \brief " + "\n";
+		template += this.comments.start + "\n";
+		template += this.comments.middle + " \\brief " + "\n";
 		
 		for (i = 0; i < parametersName.length; i++) {
-			template += " * \param " + parametersName[i] + " " + "\n";
+			template += this.comments.middle + " \\param " + parametersName[i] + " " + "\n";
 		}
 		
 		if (hasReturn) {
-			template += " * \return " + "\n";
+			template += this.comments.middle + " \\return " + "\n";
 		}
 		
-		return template + "*/";
+		return template + this.comments.end + "\n";
     };
 	
     CppCodeGenerator.prototype.generate = function (elem, path, options) {
 
 		this.genOptions = options;
-		
-		var comments = {
-			start: (options.commentsFormat) ? "/*" : "//";
-			middle: (options.commentsFormat) ? " *" : "//";
-			end: (options.commentsFormat) ? " */" : "//";
-		}
+		this.comments = new Comments(this.genOptions.commentsFormat);
 
         var getFilePath = function (extenstions) {
             var abs_path = path + "/" + elem.name + ".";
@@ -156,7 +177,7 @@ define(function (require, exports, module) {
 		var getConstructor = function(elem, isCppBody) {
 			var methodStr = "";
 			
-			if (!elem instanceof type.UMLClass) {
+			if (!(elem instanceof type.UMLClass) || (elem instanceof type.UMLInterface)) {
 				return "";
 			}
 			
@@ -178,21 +199,26 @@ define(function (require, exports, module) {
 			}
 			
 			if (isCppBody) {
+				if (elem instanceof type.UMLInterface) {
+					return methodStr;
+				}
+				
 				methodStr += elem.name + "::~" + elem.name + "()\n";
-				methodStr += "{\n}\n";
-			} else {
-				if (elem instanceof type.UMLInterface) {
-					methodStr += "virtual\t\t\t";
-				}
-				
-				methodStr += "~" + elem.name + "()";
-				
-				if (elem instanceof type.UMLInterface) {
-					methodStr += " {}";
-				}
-				
-				methodStr += ";";
+				return methodStr + "{\n}\n";
 			}
+			
+			
+			if (elem instanceof type.UMLInterface || elem instanceof type.UMLAbstraction) {
+				methodStr += "virtual ";
+			}
+			
+			methodStr += "~" + elem.name + "()";
+			
+			if (elem instanceof type.UMLInterface) {
+				methodStr += " {}";
+			}
+			
+			methodStr += ";";
 			
 			return methodStr;
 		};
@@ -348,9 +374,7 @@ define(function (require, exports, module) {
                 docs += elem.documentation;
             }
 			
-			if (this.genOptions.doxygenTemplate) {
-				/*codeWriter.writeLine(cppCodeGen.getDocuments(docs));*/
-			}
+			/*codeWriter.writeLine(cppCodeGen.getDocuments(docs));*/
 			
             writeClassMethod(methodList);
 
@@ -470,12 +494,12 @@ define(function (require, exports, module) {
     CppCodeGenerator.prototype.writeBodySkeletonCode = function (elem, options, funct) {
         var codeWriter = new CodeGenUtils.CodeWriter(this.getIndentString(options));
 
-		if (this.genOptions.doxygenTemplate) {
+		if (options.doxygenTemplate) {
 			/*codeWriter.writeLine(copyrightHeader);*/
 		}
 		
         codeWriter.writeLine();
-        codeWriter.writeLine("# include\t\t\t\"" +  elem.name + "." + options.headerFormat + "\"");
+        codeWriter.writeLine("#include\t\t\t\"" +  elem.name + "." + options.headerFormat + "\"");
         codeWriter.writeLine();
         funct(codeWriter, elem, this);
         return codeWriter.getData();
@@ -644,8 +668,12 @@ define(function (require, exports, module) {
 			return type;
 		}
 		
-		if (this.genOptions.stdNamespace.length > 0) {
-			return type.replace(this.genOptions.stdNamespace, "::");
+		while (this.genOptions.stdNamespace.length > 0 && type.indexOf(this.genOptions.stdNamespace) != -1) {
+			type = type.replace(this.genOptions.stdNamespace, "::");
+		}
+		
+		while (type.indexOf("<") != -1 && type.indexOf(this.genOptions.separator) != -1 && this.genOptions.separator.length > 0) {
+			type = type.replace(this.genOptions.separator, ",");
 		}
 		
 		return type;
@@ -673,7 +701,7 @@ define(function (require, exports, module) {
             if (this.genOptions.isCpp11 && elem.defaultValue && elem.defaultValue.length > 0) {
                 terms.push("= " + elem.defaultValue);
             }
-            return (((this.genOptions.doxygenTemplate) ? /*docs + */ : "") + terms.join(" ") + ";");
+            return (/*docs + */ terms.join(" ") + ";");
         }
     };
 
@@ -702,14 +730,24 @@ define(function (require, exports, module) {
             var inputParams = _.filter(elem.parameters, function (params) {
                 return params.direction === "in";
             });
+			
             var inputParamStrings = [];
+			var parametersName = [];
+			
             for (i = 0; i < inputParams.length; i++) {
                 var inputParam = inputParams[i];
-                inputParamStrings.push(inputParam.type + " " + this.resolveNamespaceType(inputParam.name));
+				if (isCppBody) {
+					inputParamStrings.push(this.resolveNamespaceType(inputParam.name) + " arg" + i);
+				} else {
+					inputParamStrings.push(this.resolveNamespaceType(inputParam.name));
+				}
+				parametersName.push("arg" + i);
                 docs += "\n@param " + this.resolveNamespaceType(inputParam.name);
             }
 			
-			methodStr += this.resolveNamespaceType((returnTypeParam.length > 0) ? returnTypeParam[0].type : "void");
+			var hasReturn = returnTypeParam.length > 0;
+			
+			methodStr += this.resolveNamespaceType((hasReturn) ? returnTypeParam[0].type : "void");
 			methodStr += "\t\t\t\t";
 
             if (isCppBody) {
@@ -738,8 +776,9 @@ define(function (require, exports, module) {
 				
 				methodStr += "\n{\n";
 				
-                if (returnTypeParam.length > 0) {
+                if (hasReturn) {
                     var returnType = returnTypeParam[0].type;
+					
                     if (returnType === "bool") {
                         methodStr += indentLine + "return (false);";
                     } else if (returnType === "double" || returnType === "float" ||
@@ -751,16 +790,22 @@ define(function (require, exports, module) {
                         methodStr += indentLine + 'return ("");';
                     } else if (returnType === "void") {
                         methodStr += indentLine + "return ;";
-                    } else if (returnType.indexOf("*") == returnType.length -1) {
+                    } else if (returnType.indexOf("*") == returnType.length - 1) {
                         methodStr += indentLine + "return (NULL);";
-                    } else if (returnType.indexOf("&") == returnType.length -1) {
+                    } else if (returnType.indexOf("&") == returnType.length - 1) {
 						methodStr += indentLine + "return (*this);";
 					} else {
 						methodStr += indentLine + "return (0);";
 					}
+					
                     docs += "\n@return " + this.resolveNamespaceType(returnType);
                 }
+				
                 methodStr += "\n}\n";
+				
+				if (this.genOptions.doxygenTemplate) {
+					methodStr = this.getDoxygenTemplate(true, hasReturn, inputParamStrings) + methodStr;
+				}
             } else {
                 methodStr += elem.name;
                 methodStr += "(" + inputParamStrings.join(", ") + ")";
@@ -774,10 +819,6 @@ define(function (require, exports, module) {
                 methodStr += ";";
             }
 			
-			if (this.genOptions.doxygenTemplate) {
-				/*methodStr = this.getDocuments(docs) + methodStr;*/
-			}
-			
             return methodStr;
         }
     };
@@ -790,14 +831,19 @@ define(function (require, exports, module) {
      */
     CppCodeGenerator.prototype.getDocuments = function (text) {
         var docs = "";
+		
+		if (this.comments === undefined || this.comments === null) {
+			this.comments = new Comments(false);
+		}
+		
         if (_.isString(text) && text.length !== 0) {
             var lines = text.trim().split("\n");
-            docs += comments.start + "\n";
+            docs += this.comments.start + "\n";
             var i;
             for (i = 0; i < lines.length; i++) {
-                docs += comments.middle + " " + lines[i] + "\n";
+                docs += this.comments.middle + " " + lines[i] + "\n";
             }
-            docs += comments.end + "\n";
+            docs += this.comments.end + "\n";
         }
         return docs;
     };
